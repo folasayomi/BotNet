@@ -1,0 +1,309 @@
+---
+title: "Machine Learning for Cyber Security"
+author: "Olubunmi Akinro"
+date: "2022-12-12"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# OBJECTIVE
+
+The goal of this assessment is to create a machine learning-based solution that can identify suspicious activity on a client's smart-home network using R language. 
+To build this ML-based solution, the first step was to collect and pre-process the data. This involved cleaning the data to remove any missing or invalid values, and transforming the data as needed to make it suitable for the ML algorithms to use.
+The next step was to perform feature engineering to extract useful features from the data that can help the ML algorithms to make accurate predictions.
+Once the features have been extracted, the next step would be to select the appropriate ML algorithms to use for the task. In this case, the algorithms selected are K-Means Clustering, One-Class Support Vector Machine (OCSVM), Simple Linear Regression, and Principal Component Analysis. These algorithms were chosen because they are well-suited for identifying anomalies and detecting suspicious activity in smart-home networks.
+Next, the selected algorithms were trained on the training data using appropriate hyperparameters to optimize their performance. This would involve adjusting the parameters of the algorithms to find the best values that lead to the most accurate predictions.
+After the algorithms are trained, the next step was to evaluate their performance on the testing data to see how well they can identify suspicious activity in the client's smart-home network. This would involve using appropriate evaluation metrics, such as precision, recall, and accuracy, to assess the performance of the algorithms and compare their results.
+ 
+# LOADING DATASET
+
+Loading Benign and malicious dataset file into the RMD environment using the read.csv function.
+The "mirai_attacks_benign_data.zip" file contains 6 datasets that includes 1 Benign dataset(benign_traffic.csv) and 6 malicious datasets(mirai_ack.csv,mirai_scan.csv,mirai_syn.csv,mirai_udp.csv,mirai_udpplain.csv).
+These datasets address the lack of public botnet datasets, especially for the IoT. It suggests real traffic data, gathered from 9 commercial IoT devices authentically infected by Mirai.(UCI machine learning repository: Detection_of_IoT_botnet_attacks_N_BaIoT data set (no date)).
+
+benign_traffic.csv contains 115 variables/columns and 49548 observations/rows
+
+mirai_ack.csv contains 115 variables/columns and 102195 observations/rows
+
+mirai_scan.csv contains 115 variables/columns and 107685 observations/rows
+
+mirai_syn.csv contains 115 variables/columns and 122573 observations/rows
+
+mirai_udp.csv contains 115 variables/columns and 237665 observations/rows
+
+mirai_udpplain.csv contains 115 variables/columns and 81982 observations/rows
+
+```{r load dataset}
+benign_traffic <- read.csv("benign_traffic.csv", header = TRUE)
+mirai_ack <- read.csv("mirai_ack.csv", header = TRUE)
+mirai_scan <- read.csv("mirai_scan.csv", header = TRUE)
+mirai_syn <- read.csv("mirai_syn.csv", header = TRUE)
+mirai_udp <- read.csv("mirai_udp.csv", header = TRUE)
+mirai_udpplain <- read.csv("mirai_udpplain.csv", header = TRUE)
+```
+The head() function is used to display the first six rows of a data frame or matrix. 
+```{r viewing,results='hide'}
+head(benign_traffic)
+head(mirai_ack)
+head(mirai_scan)
+head(mirai_syn)
+head(mirai_udp)
+head(mirai_udpplain)
+```
+summary()
+This function calculates and displays a variety of descriptive statistics, such as the number of observations, mean, median, minimum and maximum values, and quartiles for each variable in the data. 
+```{r summary, results='hide'}
+summary(benign_traffic)
+summary(mirai_ack)
+summary(mirai_scan)
+summary(mirai_syn)
+summary(mirai_udp)
+summary(mirai_udpplain)
+```
+# DATA PRE-PROCESSING
+
+Data pre-processing is the process of cleaning and preparing raw data for analysis. This can involve a variety of tasks, such as removing missing or incorrect values, transforming the data into a format that is more suitable for analysis, and selecting a subset of the data to work with. 
+The R functions that can be used to perform some data preprocessing include:
+**is.na()** and **any()** function is used to identify missing values
+```{r missing_values, results='hide'}
+any(is.na(benign_traffic))
+any(is.na(mirai_ack))
+any(is.na(mirai_scan))
+any(is.na(mirai_syn))
+any(is.na(mirai_udp))
+any(is.na(mirai_udpplain))
+```
+## complete.cases()
+The complete.cases()is a function in R that returns a logical vector indicating which cases are complete, that is, which cases have no missing values.
+```{r missing-values, echo=FALSE}
+benign_traffic<-benign_traffic[complete.cases(benign_traffic), ]
+mirai_ack<-mirai_ack[complete.cases(mirai_ack), ]
+mirai_scan<-mirai_scan[complete.cases(mirai_scan), ]
+mirai_syn<-mirai_syn[complete.cases(mirai_syn), ]
+mirai_udp<-mirai_udp[complete.cases(mirai_udp), ]
+mirai_udpplain<-mirai_udpplain[complete.cases(mirai_udpplain), ]
+```
+## class()
+class() is a function in R that returns the class of an object, which is a basic data type like a vector, matrix, or data frame. The class of an object determines how R will treat the object and which operations can be performed on it.
+```{r data preprocessing}
+class(benign_traffic)
+class(mirai_ack)
+class(mirai_scan)
+class(mirai_syn)
+class(mirai_udp)
+class(mirai_udpplain)
+```
+
+# FEATURE ENGINEERING
+
+Feature engineering is the process of selecting, transforming, and creating new input variables (features) for a machine learning model. This process is important because the quality and relevance of the features used by the model can have a significant impact on its performance. The goal of feature engineering is to provide the model with the best possible input data for accurate and efficient predictions.
+There are several R packages and functions that can be used for feature engineering in R, including: dplyr,kernlab,caret and fpc
+```{r library, results='hide'}
+library(caret)
+library(kernlab)
+library(fpc)
+library(dplyr)
+```
+## Data Labelling
+
+Labelled data is data that has been labeled with descriptive information. Labelling data can make it easier to understand and analyze, because the labels provide additional context and meaning to the data. In machine learning, labelled data is often used to train and evaluate supervised learning algorithms, which require a set of labeled examples in order to learn a mapping from input data to the corresponding output labels.
+Adding labels to the data, benign traffic is marked as TRUE/Normal, and malicious traffic as FALSE/Malicious
+
+```{r labelling}
+benign_traffic$Type<-TRUE
+mirai_ack$Type<-FALSE
+mirai_scan$Type<-FALSE
+mirai_syn$Type<-FALSE
+mirai_udp$Type<-FALSE
+mirai_udpplain$Type<-FALSE
+```
+# MODEL SELECTION
+
+Model selection is a process in machine learning where different algorithms or models are compared, evaluated, and selected to solve a specific task. It involves the selection of a model that best fits the data and the specific problem at hand. The selection process can involve several criteria, such as accuracy, speed, scalability, interpretability, and cost.
+For the designing and developing of a suitable prototype of the proposed solution for ACME cooperation, four algorithms are used.
+
+## 1.  K-MEANS CLUSTERING ALGORITHM 
+
+The k-Means Clustering algorithm is an unsupervised machine learning algorithm for clustering data into groups based on their similarity. The algorithm works by taking a dataset of items and grouping them into k clusters, where k is the number of clusters that you specify.
+A new dataset to store all the malicious data and the benign data.
+```{r combining}
+begAckTotal <- rbind(benign_traffic,mirai_ack,mirai_scan,mirai_syn,mirai_udp,mirai_udpplain)
+class(begAckTotal$Type)
+```
+Converting begAckTotal$Type to factor  
+```{r convert}
+begAckTotal$Type <- as.factor(begAckTotal$Type)
+```
+splitting the begAckTotal into label and unlabeled data (unlabeled data are used for unsupervised learning purposes).
+```{r splitting}
+begAckTotal.nolabel <- begAckTotal[,1:115] 
+begAckTotal.label <- begAckTotal[,116]
+```
+The elbow method is a common technique for determining the optimal number of clusters to use in a clustering algorithm. 
+To find the value of the centroid, the Elbow method was applied. From the graph below, the value for the centroid is 3.
+```{r}
+set.seed(123)
+wss <- NULL
+for (i in 1:10){
+  fit =kmeans(begAckTotal.nolabel, centers=i)
+  wss=c(wss,fit$tot.withinss)
+}
+plot(1:10,wss,type = "o")
+```
+The scale() function is a common way to normalize data by scaling it to have a mean of 0 and a standard deviation of 1.
+Normalizing the nolabel begAckTotal using the scale function
+```{r normalize}
+begAckTotal.scale <- scale(begAckTotal.nolabel)
+```
+Applying the Kmeans clustering algorithm to the dataset and printing out the valuse for size and sum of squares
+```{r kmeans}
+set.seed(123)
+fit <- kmeans(begAckTotal.scale,3)
+fit$size
+fit$betweenss
+fit$betweenss/fit$totss
+```
+The 3 clusters are 279812, 268189, 153647. Within the cluster, the sum of squares is 44.2%
+Evaluation
+Computing the accuracy of your clustering using confusion matrix
+```{r confusion matrix}
+table(begAckTotal.label,fit$cluster)
+```
+The matrix shows the number of times each class was correctly and incorrectly predicted by the model. 
+Total number of instances = 701648
+Total number of correctly classified instances are =230269+268184+153647 =652100
+Total number of incorrectly classified instances are = 49543 + 5 =49548
+Accuracy = Total number of correctly classified instances/Total number of instances= 652100/701648 = 0.9293=92%
+
+## 2.  ONE-CLASS SUPPORT VECTOR MACHINE (OCSVM) 
+
+One Class Support Vector Machine (OCSVM) is an algorithm used for one-class classification. The goal of one-class classification is to identify objects that belong to a specific class and reject objects that do not. OCSVM is a supervised learning algorithm that utilizes a hyperplane to separate a region of support vectors from the rest of the feature space. OCSVM is useful for anomaly detection, fraud detection, and outlier detection.
+**Splitting into Train and Test**
+
+For training and testing purposes, the benign data(benign_traffic) is splitted into 80:20%. The 80% of the instances for training, and the remaining 20% is merged with malicious instances for testing.
+```{r training and testing}
+valid_index <- createDataPartition(benign_traffic$Type, p=0.80, list = F)
+testBenign <- benign_traffic[-valid_index,] 
+trainingBenign <- benign_traffic[valid_index,]
+```
+**Fitting for Training ** 
+
+The ksvm() function is a function in the kernlab package in R for training and evaluating Support Vector Machines (SVMs). This function provides an interface for fitting a variety of SVM models to data, including linear, polynomial, and radial basis function (RBF) kernels. 
+```{r ksvm}
+fit.benign <- ksvm(Type~., data=trainingBenign, type="one-svc", kernel="rbfdot", kpar="automatic")
+print(fit.benign)
+```
+The OCSVM model has been fit using the Gaussian Radial Basis (RBF) kernel function with a hyperparameter value of sigma = 0.111191791951667, nu parameter set to 0.2, which determines the proportion of observations that are allowed to be misclassified as "novelty" observations. The model has identified 7957 support vectors, which are the observations that are closest to the decision boundary and have the greatest influence on the model's predictions.
+The objective function value for this model is 565180.8, which is a measure of the quality of the fit. The training error, which is the proportion of observations that are misclassified by the model, is 0.200257. 
+**Creating the Final test**
+
+To asses how good the model is by classifying both benign and malicious traffic. Combining all the malicious traffic and the remaining 20% benign traffic to create the final test dataset. 
+```{r final test}
+test.final <- rbind(testBenign,mirai_ack,mirai_scan,mirai_syn,mirai_udp,mirai_udpplain)
+```
+**Prediction**
+```{r}
+predictions <- predict(fit.benign, test.final[,1:(ncol(test.final)-1)], type="response")
+confusionMatrix(data=as.factor(predictions),reference=as.factor(test.final$Type)) 
+```
+This confusion matrix shows the performance of the SVM model on a binary classification task with two classes, FALSE and TRUE. The matrix shows the number of true positives, false positives, true negatives, and false negatives produced by the model. The True positives,652100, are malicious data classified as malicious. The True negatives, 7901, are Benign and classified correctly as Benign data.  The accuracy of the model is 0.9971, meaning that it correctly predicted the class of 99.71% of the samples. The sensitivity of the model is 1.0000, meaning that it correctly predicted all of the positive samples. The specificity of the model is 0.7974, meaning that it correctly predicted 88.57% of the negative samples. The positivity prevalence is 0.9969, meaning that 99.69% of the samples were positive. The balanced accuracy of the model is 0.8987, which is the average of the sensitivity and specificity. The 'Positive' class in this case is FALSE.
+
+## 3. Simple Linear Regression
+
+Simple linear regression is a statistical method that allows us to examine the relationship between two continuous variables. In R, this can be performed using the lm() function, which stands for "linear model."
+Simple Linear Regression requires only one target variable and one predictor variable. Using column "MI_dir_L1_mean" as target variable and "H_L5_weight" as predictor variable from the begAckTotal dataset.
+
+```{r preprocess}
+X<- begAckTotal[,"MI_dir_L1_mean"]
+Y<- begAckTotal[,"H_L5_weight"] 
+```
+Finding the correlation coefficient
+The correlation coefficient is a measure of the strength and direction of the relationship between the two continuous variables. 
+```{r correlation}
+xycorr<- cor(Y,X)
+xycorr 
+```
+This will produce the correlation coefficient for the two variables, which will be a value between -1 and 1. A value of -1 indicates a strong negative correlation, a value of 0 indicates no correlation, and a value of 1 indicates a strong positive correlation.
+The correlation result is 0.327 which is no correlation.
+
+```{r model}
+xymodel<- lm(X~Y, data=begAckTotal) # model
+summary(xymodel)
+```
+
+```{r}
+plot(X~Y, col=Y) # scatter plot
+abline(xymodel, col="green", lwd=2)
+```
+predict() function can be used to make predictions about the dependent variable (also known as the response or outcome variable) based on the value of the independent variable (also known as the predictor or explanatory variable)
+```{r }
+p1<- predict(xymodel,data.frame("Y"=3))
+p1
+```
+To calculate the accuracy of a simple linear regression model in R, the mean squared error (MSE) metric is used, which measures the average squared difference between the predicted values and the actual values of the dependent variable.
+```{r}
+mse <- mean((p1 - X)^2)
+mse
+```
+The accuracy result of the model is a decimal value between 0 and 1 which is -36482.4
+```{r }
+accuracy <- 1 - mse
+accuracy
+```
+## 4 PRINCIPAL COMPONENT ANALYSIS(PCA) 
+
+Principal Component Analysis (PCA) is a dimensionality reduction technique that is often used to reduce the number of variables in a dataset while retaining as much of the original information as possible. It is not typically used to calculate the accuracy of a model, but rather to simplify the data so that it can be more easily analyzed or visualized.
+To evaluate the accuracy of this model, metrics such as the mean squared error (MSE), root mean squared error (RMSE), or R-squared value. 
+```{r pca}
+X<- begAckTotal[,"MI_dir_L1_mean"]
+Y<- begAckTotal[,"H_L5_weight"] 
+new.pca <- prcomp(begAckTotal[,1:115], center = TRUE,scale. = TRUE)
+```
+use the predict() function to make predictions based on the principal components
+```{r}
+predictions <- predict(new.pca, begAckTotal[,1:115])
+```
+calculate the MSE by taking the mean of the squared differences between the predicted and actual values
+```{r}
+mse <- mean((predictions - X)^2)
+mse
+```
+calculate the accuracy of the model as 1 - MSE
+```{r}
+accuracy <- 1 - mse
+accuracy
+```
+This will produce the accuracy of the model as a decimal value between 0 and 1
+
+# TASK B
+
+As a security analyst employed by Acme Corporation, I would like to present my solution regarding cybersecurity and machine learning needs to the Senior Solution Architect (SSA) utilising the one-class support vector machine (SVM) model considering the actions completed in Task A.
+As you can see from the confusion matrix, the SVM model accurately predicted every single positive sample in the dataset, with an accuracy of 0.9971 and a sensitivity of 1.0000. As a result, it works well for real-time detection and classification of harmful data.
+The model successfully predicted 88.57 per cent of the dataset's negative samples, according to its specificity of 0.7974. This shows that the model can distinguish between legitimate and malicious data and can be trusted to correctly identify potential dangers.
+With a high positivity prevalence of 0.9969, the SVM model has overall shown outstanding performance on a binary classification test. As a result, it serves as a useful tool for strengthening the business' cybersecurity posture and defending against prospective threats.
+
+# TASK C
+
+To implement machine learning algorithms (OCSVM), I would prefer to use an edge device, such as a wireless router.
+Utilizing on-edge technology primarily allows algorithms to be run closer to the data source. The analysis of the data might be quicker and more precise as it does not need to be first transported to the cloud or another distant location. The price of data transfer may also be reduced.
+On occasion, on-edge device deployment can be more difficult than cloud-based or on-device deployment. Configuring, managing, and upgrading on-edge devices could be more difficult. The restricted storage and processing power of on-edge devices might be a constraint on the OCSVM algorithms' complexity.
+It can be very effective to reduce latency and increase accuracy by deploying ML algorithms on edge devices, but it may take more work to configure and maintain than other deployment methods.
+
+# TASK D
+
+OCSVMs can be used in the context of on-edge devices to recognise and highlight data points that differ materially from the "regular" data that is generally viewed on the device.
+
+## Strength
+
+1. By utilising OCSVMs for on-edge devices, it is possible to quickly spot out-of-the-ordinary or abnormal data points that can hint to a potential security problem.
+2. OCSVMs may be rather easy to use and train. For on-edge devices, which can have constrained resources and would need to run the algorithms in real time, this can be advantageous.
+
+## Weakness
+
+1. Data points that have been skillfully prepared to cause an OCSVM to classify something incorrectly can make them sensitive to adversarial examples.
+2. The selection of parameters for OCSVMs can have an impact. A restricted OCSVM that rejects an excessive number of normal data points as outliers could result from setting the nu value too low.
+
